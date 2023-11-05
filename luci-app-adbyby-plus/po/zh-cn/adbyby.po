@@ -1,0 +1,161 @@
+msgid ""
+msgstr ""
+
+msgid "ADBYBY Plus +"
+msgstr "广告屏蔽大师 Plus+"
+
+msgid "ADBYBY Plus+ L"
+msgstr "广告屏蔽大师Plus+ L"
+
+msgid "Adbyby is a good guarder for family. It can prevent tracking, privacy theft and a variety of malicious websites, but only http/1.1 way."
+msgstr "Adbyby 是一个优秀的家庭网络过滤大师，能阻止跟踪、隐私窃取及各种恶意网站，但只限于Http流量。"
+
+msgid "Adbyby Plus +"
+msgstr "广告屏蔽大师 Plus+"
+
+msgid "Adbyby Plus +, Lite"
+msgstr "广告屏蔽大师P+ 简化版（L）"
+
+msgid "Base Setting"
+msgstr "基本设置"
+
+msgid "Running Mode"
+msgstr "运行模式"
+
+msgid "Global Mode (The slowest and the best effects)"
+msgstr "全局模式（最慢, 效果最好）"
+
+msgid "Plus + Mode (Filter domain name list and blacklist website.Recommended)"
+msgstr "Plus + 模式（只过滤列表内域名结合ABP名单。推荐！）"
+
+msgid "No filter Mode (Must set in Client Filter Mode Settings manually)"
+msgstr "手动代理模式（必须手动设置浏览器代理，或者客户端过滤模式设置）"
+
+msgid "Transparent proxy"
+msgstr "透明代理"
+
+msgid "Adbyby and Rule state"
+msgstr "规则状态"
+
+msgid "Restart"
+msgstr "重启"
+
+msgid "Restart Adbyby"
+msgstr "重启Adbyby"
+
+msgid "After saving, you may need restart adbyby"
+msgstr "全部保存之后，你可能还需要手动重启，让配置生效。"
+
+msgid "Custom Plus+ Domain List"
+msgstr "自定义的Plus+模式过滤域名"
+
+msgid "Bypass Domain List"
+msgstr "域名白名单"
+
+msgid "Black Domain List"
+msgstr "域名黑名单"
+
+msgid "Black IP List"
+msgstr "IP黑名单"
+
+msgid "Advance Setting"
+msgstr "高级设置"
+
+msgid "Auto update rules"
+msgstr "规则自动更新"
+
+msgid "Update the rule at 6:10 a.m. every morning and restart adbyby"
+msgstr "每天早上六点十分更新规则并重启"
+
+msgid "Extract the domain name to plus"
+msgstr "提取域名给Plus列表"
+
+msgid "Try to extract the domain name to plus mode. But it may become heavy."
+msgstr "尝试自动从规则中提取域名给Plus模式，但这数量可能会很多。"
+
+msgid "Subscribe 3rd Rules Data"
+msgstr "订阅第三方去广告规则"
+
+msgid "Records"
+msgstr "条记录"
+
+msgid "Refresh Data"
+msgstr "更新数据库"
+
+msgid "Refresh..."
+msgstr "正在更新，请稍候.."
+
+msgid "Refresh OK!"
+msgstr "更新成功！"
+
+msgid "Refresh Error!"
+msgstr "更新失败！"
+
+msgid "No new data!"
+msgstr "你已经是最新数据，无需更新！"
+
+msgid "Total Records:"
+msgstr "新的总纪录数："
+
+msgid "Delete All Subscribe Rules"
+msgstr "清空所有订阅的规则库"
+
+msgid "Anti-AD Rules Subscribe"
+msgstr "广告过滤规则订阅URL"
+
+msgid "Adp rules for Adbyby, but AdGuardHome / Host / DNSMASQ rules also be supported"
+msgstr "第三方Adbyby规则兼容部分Adp语法，但AdGuardHome / Host / DNSMASQ 规则也能识别"
+
+msgid "Update Adbyby Rules Manually"
+msgstr "手动更新规则"
+
+msgid "User-defined Rule"
+msgstr "用户自定义规则"
+
+msgid "<strong>Client Filter Mode Settings</strong>"
+msgstr "<strong>客户端过滤模式设置</strong>"
+
+msgid "Filter mode settings can be set to specific LAN clients ( <font color=blue> No filter , Global filter </font> ) . Does not need to be set by default."
+msgstr "可以为局域网客户端分别设置不同的过滤模式 ( <font color=blue> 不过滤 , 全局过滤 </font> ) 。默认无需设置。"
+
+msgid "IP Address"
+msgstr "IP地址"
+
+msgid "Filter Mode"
+msgstr "过滤模式"
+
+msgid "No filter"
+msgstr "不过滤"
+
+msgid "Global filter"
+msgstr "全局过滤"
+
+msgid "Last Update Checked"
+msgstr "上一次检查规则更新"
+
+msgid "Lazy Rule"
+msgstr "正式版规则"
+
+msgid "Video Rule"
+msgstr "测试版规则"
+
+msgid "Adblock Plus Host List"
+msgstr "广告屏蔽大师 Plus 规则列表"
+
+msgid "Block Domain List"
+msgstr "域名黑名单"
+
+msgid "Block IP List"
+msgstr "IP黑名单"
+
+msgid "It is impossible to have a new version."
+msgstr "不可能再有新版本，勾选就每天早上6:15检查"
+
+msgid "Adbyby Application Auto Update"
+msgstr "自动更新主程序"
+
+msgid "Adbyby online"
+msgstr "Adbyby 在线版本"
+
+msgid "If not found adbyby, will download it base on this."
+msgstr "如果没有发现adbyby主程序，那将根据这个来下载。"

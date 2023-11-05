@@ -1,0 +1,302 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+STOP=10
+
+
+EXTRA_COMMANDS="add_rules add_rule del_rule reload_rule"
+PROG_PATH=/usr/share/adbyby
+DATA_PATH=$PROG_PATH/data
+WAN_FILE=/tmp/dnsmasq.d/dnsmasq-adbyby.d/03-adbyby-ipset.conf
+CRON_FILE=/etc/crontabs/root
+CONFIG=adbyby
+ipt_n="iptables -w 2 -t nat"
+port="8118"
+rset=0
+bo=0
+amd5=""
+imd5=""
+
+uci_get_by_name() {
+	local ret=$(uci get $CONFIG.$1.$2 2>/dev/null)
+	echo ${ret:=$3}
+}
+
+uci_get_by_type() {
+	local index=0
+	if [ -n $4 ]; then
+	
+		index=$4
+	fi
+	local ret=$(uci get $CONFIG.@$1[$index].$2 2>/dev/null)
+	echo ${ret:=$3}
+}
+
+get_config()
+{
+	config_get_bool enable $1 enable 0
+	config_get_bool cron_mode $1 cron_mode 1
+	config_get wan_mode $1 wan_mode 1
+	config_get_bool mem_mode $1 mem_mode 1
+	config_get_bool plus_help $1 plus_help 0
+	config_get_bool exe_update $1 exe_update 0
+	config_get exe_arch $1 exe_arch 0
+}
+
+add_rules()
+{
+	rm -f $DATA_PATH/user.bin /tmp/adbyby/data/user.bin 2>/dev/null
+	grep -v ^! $PROG_PATH/rules.txt > $DATA_PATH/user.txt
+	cat $PROG_PATH/adesc.conf | sed -e 's:^:@@||:' >> $DATA_PATH/user.txt
+	[ -s /tmp/rules/adnew.txt ] && cat /tmp/rules/adnew.txt |sort -u 2>/dev/null >> $DATA_PATH/user.txt
+	cp -f $PROG_PATH/rules.txt $DATA_PATH/rules.txt
+	[ -s /tmp/adbyby/data/count.txt ] && cp -f /tmp/adbyby/data/count.txt $DATA_PATH/count.txt || rm -f $DATA_PATH/count.txt
+	cp -au $DATA_PATH /tmp/adbyby
+}
+
+
+add_cron()
+{
+	if [ $cron_mode -eq 1 ]; then
+		del_cron
+		echo '10 6 * * * /usr/share/adbyby/adblock.sh > /tmp/adupdate.log 2>&1' >> $CRON_FILE
+		crontab $CRON_FILE
+	fi
+	if [ $exe_update -eq 1 ]; then
+		del_cron
+		echo '15 6 * * * /usr/share/adbyby/appupdate.sh $exe_arch >> /tmp/adupdate.log 2>&1' >> $CRON_FILE
+		crontab $CRON_FILE
+	fi
+}
+
+del_cron()
+{
+	sed -i -e "/adbyby\/adblock.sh/d" -e "/adbyby\/appupdate.sh/d" $CRON_FILE
+	[ $rset -eq 0 ] && /etc/init.d/cron restart
+}
+
+ip_rule()
+{
+  local icount=$(uci show adbyby | grep 'filter_mode' | wc -l)
+
+	case $wan_mode in
+		0)
+			$ipt_n -I PREROUTING -p tcp -j ADBYBY 2>/dev/null
+			;;
+		1)
+			ipset -! -N adbyby_wan hash:ip
+			$ipt_n -I PREROUTING -p tcp --dport 80 -m set --match-set adbyby_wan dst -j ADBYBY
+			;;
+		2)
+			echo "Cell ADBYBY is ready, pull in!"
+			;;
+	esac
+
+	let icount=icount-1
+	for i in $(seq 0 $icount)
+	do
+		local ip=$(uci_get_by_type acl_rule ipaddr '' $i)
+		local mode=$(uci_get_by_type acl_rule filter_mode '' $i)
+		[ -n "$ip" ] || continue
+		case "$mode" in
+		disable)
+			$ipt_n -I ADBYBY -s $ip -j RETURN
+			;;
+		global)
+			$ipt_n -I PREROUTING -s $ip -p tcp -j ADBYBY 2>/dev/null
+			;;
+		esac
+	done
+	ipset -! -N adbyby_esc hash:ip
+	$ipt_n -I ADBYBY -m set --match-set adbyby_esc dst -j RETURN
+}
+
+get_domain(){
+	local tt="/tmp/adby_plus_d.txt"
+	cat $1 |sed -r -e 's/#.*//' -e 's/\/.*//' -e 's/\$.*//' -e 's/^!.*//' -e '/^@@/d' -e '/^~/d' \
+	|grep -oE "[0-9a-zA-Z]([0-9a-zA-Z\-]*\.)+[a-zA-Z]{2,5}" \
+	|grep -vE '(\.jpg|\.png|\.js|\.asp|\.php|\.htm|\.mp|\.txt|\.gif)' > $tt
+	echo "`sort -u ${tt} 2>/dev/null`" >> $2
+	rm -f $tt
+}
+
+add_dns()
+{
+	mkdir -p /tmp/dnsmasq.d/dnsmasq-adbyby.d
+	mkdir -p /tmp/dnsmasq.d
+
+	[ -s $PROG_PATH/adesc.conf ] && awk '!/^$/&&!/^#/{printf("ipset=/%s/'"adbyby_esc"'\n",$0)}' $PROG_PATH/adesc.conf > /tmp/dnsmasq.d/dnsmasq-adbyby.d/06-dnsmasq.esc
+
+	local tt="/tmp/adby_plus_d1.txt"
+	local var=1
+	local dcc=0
+	local ipsmd5=""
+	local addnsmd5=""
+	if [ $wan_mode -eq 1 ]; then
+		for i in ` grep -oE "[0-9]+(\.[0-9]+){3}" $PROG_PATH/adhost.conf`;do ipset -! add adbyby_wan $i;done
+		grep -oE "[0-9a-zA-Z][0-9a-zA-Z\-]*(\.[0-9a-zA-Z\-]+)*\.[a-zA-Z]{2,}" $PROG_PATH/adhost.conf \
+		|awk '!/^$/&&!/^#/{printf("ipset=/%s/'"adbyby_wan"'\n",$0)}' > $tt
+		if [ $plus_help -eq 1 ]; then
+			rm -f /tmp/plusad1.txt
+			if [ -s /tmp/adbyby/data/lazy.txt ]; then
+				get_domain "/tmp/adbyby/data/lazy.txt" "/tmp/plusad1.txt"
+			fi
+			if [ -s /tmp/adbyby/data/video.txt ]; then
+				get_domain "/tmp/adbyby/data/video.txt" "/tmp/plusad1.txt"
+			fi
+			if [ -s $DATA_PATH/user.txt ]; then
+				get_domain "$DATA_PATH/user.txt" "/tmp/plusad1.txt"
+			fi
+			if [ -s /tmp/plusad1.txt ];then
+				awk '!/^$/&&!/^#/{printf("ipset=/%s/'"adbyby_wan"'\n",$0)}' /tmp/plusad1.txt >> $tt
+			fi
+		fi
+		[ -s $tt ] && echo "`sort -u ${tt} 2>/dev/null`" > $WAN_FILE
+		ipsmd5=`md5sum $WAN_FILE 2>/dev/null| cut -d ' ' -f1`
+		if ls /tmp/dnsmasq.d/dnsmasq-adbyby.d/* >/dev/null 2>&1; then
+			mkdir -p /tmp/dnsmasq.d
+		fi
+	fi
+	dcc=`ls /tmp/dnsmasq.d/dnsmasq-adbyby.d/* 2>/dev/null | wc -l`
+	if [ $dcc -gt 0 ];then
+		echo 'conf-dir=/tmp/dnsmasq.d/dnsmasq-adbyby.d' > /tmp/dnsmasq.d/dnsmasq-adbyby.conf
+		addnsmd5=`md5sum /tmp/dnsmasq.d/dnsmasq-adbyby.conf 2>/dev/null| cut -d ' ' -f1`
+	fi
+	mkdir -p /tmp/adbyby/rules/data /tmp/adbyby/rules/host
+	echo "$addnsmd5|$ipsmd5" > /tmp/adbyby/addnsmd5.txt
+	rm -f /tmp/plusad1.txt
+	rm -f $tt
+}
+
+del_dns()
+{
+	rm -f /tmp/dnsmasq.d/dnsmasq-adbyby.conf
+	rm -f /tmp/dnsmasq.d/dnsmasq-adbyby.d/*
+	rm -f /tmp/adbyby_host.conf
+}
+
+
+add_rule()
+{
+	$ipt_n -N ADBYBY
+	$ipt_n -I ADBYBY -p tcp --dport 443 -j RETURN
+	$ipt_n -A ADBYBY -p tcp -d 0.0.0.0/8 -j RETURN
+	$ipt_n -A ADBYBY -p tcp -d 10.0.0.0/8 -j RETURN
+	$ipt_n -A ADBYBY -p tcp -d 127.0.0.0/8 -j RETURN
+	$ipt_n -A ADBYBY -p tcp -d 169.254.0.0/16 -j RETURN
+	$ipt_n -A ADBYBY -p tcp -d 172.16.0.0/12 -j RETURN
+	$ipt_n -A ADBYBY -p tcp -d 192.168.0.0/16 -j RETURN
+	$ipt_n -A ADBYBY -p tcp -d 224.0.0.0/4 -j RETURN
+	$ipt_n -A ADBYBY -p tcp -d 240.0.0.0/4 -j RETURN
+	ip_rule
+	if [ $(ipset list music -name -quiet | grep music) ]; then
+		$ipt_n -A ADBYBY -m set --match-set music dst -j RETURN 2>/dev/null
+	fi
+	$ipt_n -A ADBYBY -p tcp -j REDIRECT --to-ports $port 2>/dev/null
+	mkdir -p /var/etc
+	echo -e "/etc/init.d/adbyby restart" > "/var/etc/adbyby.include"
+}
+
+remov_PREADBYBY(){
+	$ipt_n -F ADBYBY 2>/dev/null
+	local ia=0
+	local ic=0
+	local i=1
+	local c=0
+	iptables-save -c | grep -v ADBYBY | iptables-restore -c
+	while true;do
+		sleep 1s
+		ia=`$ipt_n --line-numbers -L PREROUTING |grep "ADBYBY"`
+		ic=`echo "$ia" | grep -v "^$" |wc -l`
+		[ $ic -eq 0 ] && break
+		i=`echo "$ia" | awk '{print $1}'|head -n1`
+		[ -n "$i" ] || continue
+		$ipt_n -D PREROUTING $i 2>/dev/null
+		let c++
+		[ $c -gt 12 ] && sleep 1s && $ipt_n -F ADBYBY 2>/dev/null
+		[ $c -gt 15 ] && break
+	done
+	$ipt_n -X ADBYBY 2>/dev/null
+}
+
+del_rule()
+{
+	remov_PREADBYBY
+	ipset -! -F adbyby_esc 2>/dev/null
+	ipset -! -X adbyby_esc 2>/dev/null
+	ipset -! -F adbyby_wan 2>/dev/null
+	ipset -! -X adbyby_wan 2>/dev/null
+}
+
+reload_rule()
+{
+	config_load adbyby
+	config_foreach get_config adbyby
+	del_rule
+	[ $enable -eq 0 ] && exit 0
+	add_rule
+}
+
+kill_byby(){
+	kill -9 $(busybox ps -w | grep "/tmp/adbyby/adbyby" | grep -v grep | grep -v update| grep -v adblock | awk '{print $1}') >/dev/null 2>&1
+}
+
+dnsmasq_do(){
+	[ -s /tmp/adbyby/addnsmd5.txt ] || return
+	local namd5=`cat /tmp/adbyby/addnsmd5.txt 2>/dev/null | cut -d '|' -f1`
+	local nimd5=`cat /tmp/adbyby/addnsmd5.txt 2>/dev/null | cut -d '|' -f2`
+	if [ "$amd5" == "$namd5" -a "$imd5" == "$nimd5" ]; then
+		return
+	else
+		/etc/init.d/dnsmasq restart
+	fi
+}
+
+start()
+{
+	config_load adbyby
+	config_foreach get_config adbyby
+
+	[ $enable -ne 0 ] || return
+	if [ ! -f $PROG_PATH/adbyby ]; then
+		sh $PROG_PATH/appupdate.sh $exe_arch
+	fi
+	[ -f $PROG_PATH/adbyby ] || return
+	add_cron
+	[ ! -d "/tmp/adbyby/data" ]  && cp -a /usr/share/adbyby /tmp/ && rm -f /tmp/adbyby.updated
+	add_rules
+	[ $bo -eq 0 ] && kill_byby
+	sleep 3s
+	/tmp/adbyby/adbyby >/dev/null 2>&1 &
+
+	[ $bo -eq 0 ] && del_rule
+	add_rule
+	amd5=`cat /tmp/adbyby/addnsmd5.txt 2>/dev/null | cut -d '|' -f1`
+	imd5=`cat /tmp/adbyby/addnsmd5.txt 2>/dev/null | cut -d '|' -f2`
+	add_dns
+	dnsmasq_do
+}
+
+stop()
+{
+	config_load adbyby
+	config_foreach get_config adbyby
+	[ $rset -eq 0 ] && del_rule
+	del_cron
+	del_dns
+	kill_byby
+	[ $rset -eq 0 ] && /etc/init.d/dnsmasq restart
+}
+
+restart(){
+	rset=1
+	stop
+	start
+}
+
+boot()
+{
+	bo=1
+	mkdir -p /tmp/adbyby && cp -a /usr/share/adbyby /tmp/
+	start
+}

@@ -17,8 +17,8 @@ if [ ! -f "/tmp/adbyby.updated" ];then
          exit 0
       elif [ -s /tmp/md5.json ];then
       
-        touch /tmp/lazy.txt && uclient-fetch --no-check-certificate -T 10  -O /tmp/lazy.txt https://cdn.jsdelivr.net/gh/kongfl888/ad-rules/lazy.txt
-        touch /tmp/video.txt && uclient-fetch --no-check-certificate -T 10  -O /tmp/video.txt https://cdn.jsdelivr.net/gh/kongfl888/ad-rules/video.txt
+        touch /tmp/lazy.txt && uclient-fetch --no-check-certificate -T 10  -O /tmp/lazy.txt https://cdn.jsdelivr.net/gh/kongfl888/ad-rules/lazy2.txt
+        touch /tmp/video.txt && uclient-fetch --no-check-certificate -T 10  -O /tmp/video.txt https://cdn.jsdelivr.net/gh/kongfl888/ad-rules/video2.txt
         
         touch /tmp/local-md5.json && md5sum /tmp/lazy.txt /tmp/video.txt > /tmp/local-md5.json
         
